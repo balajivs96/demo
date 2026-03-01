@@ -8,12 +8,13 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.app.demo.dto.LoginDto;
+import com.app.demo.dto.RefreshTokenRequestDto;
 import com.app.demo.dto.UserDto;
 import com.app.demo.serviceImpl.AuthServiceImpl;
 import com.app.demo.serviceImpl.UserServiceImpl;
 import com.app.demo.utils.ApiResponse;
-import com.app.demo.utils.JwtUtil;
 
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.AllArgsConstructor;
 
 @RestController
@@ -23,7 +24,6 @@ public class AuthController {
 
 	private UserServiceImpl userServiceImpl;
 	private AuthServiceImpl authServiceImpl;
-	private final JwtUtil jwtUtil;
 
 	@PostMapping("/register")
 	private ResponseEntity<?> createUser(@RequestBody UserDto userDto) {
@@ -33,9 +33,16 @@ public class AuthController {
 	}
 
 	@PostMapping("/login")
-	private ResponseEntity<?> loginUser(@RequestBody LoginDto loginDto) {
-		String data = authServiceImpl.loginUser(loginDto);
-		ApiResponse<String> response = new ApiResponse<>(data, HttpStatus.OK.value(), null);
-		return ResponseEntity.ok(response);
+	private ResponseEntity<?> loginUser(@RequestBody LoginDto loginDto, HttpServletResponse response) {
+		String data = authServiceImpl.loginUser(loginDto, response);
+		ApiResponse<String> res = new ApiResponse<>(data, HttpStatus.OK.value(), null);
+		return ResponseEntity.ok(res);
+	}
+	
+	@PostMapping("/refresh-token")
+	public ResponseEntity<?> refreshToken(@RequestBody RefreshTokenRequestDto request, HttpServletResponse response) {
+		String data = authServiceImpl.refreshToken(request, response);
+		ApiResponse<?> res = new ApiResponse<>(data, HttpStatus.OK.value(), null);
+		return ResponseEntity.ok(res);
 	}
 }

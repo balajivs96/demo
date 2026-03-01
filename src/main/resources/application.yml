@@ -26,3 +26,10 @@ spring:
   web:
     resources:
       add-mappings: false
+
+
+app:
+  jwt:
+    secret: DemoapplicationSecretkeyforspringbootjwtgeneration
+    expiry: 300000
+    refresh-expiry: 86400000
