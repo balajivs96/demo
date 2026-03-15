@@ -2,6 +2,7 @@ package com.app.demo.config;
 
 import java.io.IOException;
 import java.util.Collections;
+import java.util.List;
 
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -31,31 +32,37 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 	protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
 			throws ServletException, IOException {
 
+		String path = request.getServletPath();
+		List<String> publicPaths = List.of("/auth/", "/h2", "/h2/", "/swagger-ui/", "/v3/api-docs/");
+
+		boolean isPublic = publicPaths.stream().anyMatch(path::startsWith);
+		if (isPublic) {
+			filterChain.doFilter(request, response);
+			return;
+		}
+
 		Cookie cookie = WebUtils.getCookie(request, "access_token");
 
 		if (cookie != null) {
-
 			String token = cookie.getValue();
-
 			try {
-				String email = jwtUtil.extractEmail(token);
-
-				if (email != null && !jwtUtil.isTokenExpired(token)
-						&& SecurityContextHolder.getContext().getAuthentication() == null) {
-
-					UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(email,
-							null, Collections.emptyList());
-
-					authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-
-					SecurityContextHolder.getContext().setAuthentication(authentication);
+				if (!jwtUtil.isTokenExpired(token)) {
+					String email = jwtUtil.extractEmail(token);
+					if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+						UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+								email, null, Collections.emptyList());
+						authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+						SecurityContextHolder.getContext().setAuthentication(authentication);
+					}
 				}
-
 			} catch (Exception e) {
-				throw new RuntimeException("Invalid or expired JWT token");
+				// Token invalid or corrupted → clear authentication but don’t throw
+				// RuntimeException
+				SecurityContextHolder.clearContext();
 			}
 		}
 
+		// Proceed with filter chain even if token missing or invalid
 		filterChain.doFilter(request, response);
 	}
 
